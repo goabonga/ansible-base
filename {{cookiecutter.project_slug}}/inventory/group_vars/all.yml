@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Lab-wide settings shared by the KVM host and every guest.
+---
+
+# Where the generated lab artefacts live on the workstation: the dedicated
+# SSH keypair and the cloud image checksum. Guest disks and cloud-init seeds
+# live in `lab_libvirt_images_dir` because libvirt/AppArmor already allow
+# qemu to read that path.
+lab_state_dir: "{% raw %}{{ lookup('ansible.builtin.env', 'HOME') }}{% endraw %}/.local/share/{{ cookiecutter.project_slug }}"
+lab_libvirt_uri: qemu:///system
+lab_libvirt_images_dir: /var/lib/libvirt/images
+
+# Isolated NAT network for the lab. Guests get static addresses through
+# cloud-init, so the DHCP range only serves guests created by hand.
+lab_network_name: {{ cookiecutter.lab_network_name }}
+lab_network_bridge: {{ cookiecutter.lab_network_bridge }}
+lab_network_domain: {{ cookiecutter.lab_network_domain }}
+lab_network_gateway: {{ cookiecutter.lab_network_subnet }}.1
+lab_network_netmask: 255.255.255.0
+lab_network_prefix: 24
+lab_network_dhcp_start: {{ cookiecutter.lab_network_subnet }}.100
+lab_network_dhcp_end: {{ cookiecutter.lab_network_subnet }}.200
+lab_network_nameservers:
+  - {{ cookiecutter.lab_network_subnet }}.1
+{% if cookiecutter.lab_base_image == 'ubuntu-24.04-noble' %}
+# Guest base image: Ubuntu 24.04 LTS (noble) cloud image.
+lab_image_name: noble-server-cloudimg-amd64.img
+lab_image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+lab_image_checksum_url: https://cloud-images.ubuntu.com/noble/current/SHA256SUMS
+
+# Unprivileged account created by cloud-init and used by Ansible.
+lab_vm_user: ubuntu
+{% elif cookiecutter.lab_base_image == 'ubuntu-22.04-jammy' %}
+# Guest base image: Ubuntu 22.04 LTS (jammy) cloud image.
+lab_image_name: jammy-server-cloudimg-amd64.img
+lab_image_url: https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
+lab_image_checksum_url: https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS
+
+# Unprivileged account created by cloud-init and used by Ansible.
+lab_vm_user: ubuntu
+{% else %}
+# Guest base image: Debian 12 (bookworm) generic cloud image.
+lab_image_name: debian-12-generic-amd64.qcow2
+lab_image_url: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2
+lab_image_checksum_url: https://cloud.debian.org/images/cloud/bookworm/latest/SHA512SUMS
+
+# Unprivileged account created by cloud-init and used by Ansible.
+lab_vm_user: debian
+{% endif %}
+lab_ssh_key_path: "{% raw %}{{ lab_state_dir }}{% endraw %}/id_ed25519"
+lab_timezone: Etc/UTC

@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Chris <goabonga@pm.me>
 
-# This repository ships Ansible content, not a Python distribution. The
-# project metadata exists so `uv` can manage the toolchain (ansible-core,
-# ansible-lint, yamllint, ruff for scripts/) and so multicz has a single
-# place to write the version. `package = false` keeps uv from trying to
-# build a wheel.
+# This repository ships a cookiecutter template, not a Python distribution.
+# The project metadata exists so `uv` can manage the toolchain used to test
+# the template: cookiecutter itself, pytest, and the very linters the
+# generated project runs in its own CI. `package = false` keeps uv from
+# trying to build a wheel.
 
 [project]
 name = "ansible-base"
 version = "0.0.0"
-description = "Reusable Ansible skeleton for disposable KVM/QEMU labs on a local workstation."
+description = "Cookiecutter template for disposable KVM/QEMU Ansible labs."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Chris", email = "goabonga@pm.me" }]
-keywords = ["ansible", "kvm", "libvirt", "qemu", "cloud-init", "template"]
+keywords = ["cookiecutter", "template", "ansible", "kvm", "libvirt", "qemu"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -36,13 +36,16 @@ dependencies = []
 Homepage = "https://github.com/goabonga/ansible-base"
 Repository = "https://github.com/goabonga/ansible-base"
 Issues = "https://github.com/goabonga/ansible-base/issues"
-Changelog = "https://github.com/goabonga/ansible-base/blob/main/CHANGELOG.md"
 
 [tool.uv]
 package = false
 
 [dependency-groups]
 dev = [
+    "cookiecutter>=2.6",
+    "pytest>=8",
+    # The generated project's own gates, so the test suite can run them
+    # against the freshly generated tree.
     "ansible-core>=2.18",
     "ansible-lint>=25",
     "yamllint>=1.35",
@@ -53,6 +56,9 @@ dev = [
 [tool.ruff]
 target-version = "py311"
 line-length = 88
+# The template directory is Jinja, not Python: `{{cookiecutter.project_slug}}`
+# is not a valid identifier and its contents are not importable.
+extend-exclude = ["{{cookiecutter.project_slug}}"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
@@ -61,3 +67,6 @@ ignore = ["E501"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

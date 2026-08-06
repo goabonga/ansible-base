@@ -14,7 +14,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: ansible-base version
+      label: {{ cookiecutter.project_slug }} version
       description: "Tag or commit you are running (`git describe --always`)."
     validations:
       required: true

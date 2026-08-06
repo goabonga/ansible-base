@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Chris <goabonga@pm.me>
 
-# Template: set 2026 and Chris <goabonga@pm.me> in LICENSE_LINES below to match
+# Template: set the year and author in LICENSE_LINES below to match
 # the repo (single year for a new repo, "2024-2026" range for an older one).
 
 import argparse
@@ -12,7 +12,7 @@ import sys
 
 LICENSE_LINES = [
     "# SPDX-License-Identifier: MIT",
-    "# Copyright (c) 2026 Chris <goabonga@pm.me>",
+    "# Copyright (c) {{ cookiecutter.year }} {{ cookiecutter.author_name }} <{{ cookiecutter.author_email }}>",
 ]
 LICENSE_HEADER = "\n".join(LICENSE_LINES)
 

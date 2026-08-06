@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# yamllint configuration. Every YAML file carries the two SPDX comment lines
+# above its `---`, so `document-start` must allow leading comments (it does)
+# and `comments` must not require a blank line before them.
+---
+
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+  comments:
+    require-starting-space: true
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  truthy:
+    # `on:` in GitHub Actions workflows is a key, not a boolean.
+    allowed-values: ["true", "false"]
+    check-keys: false
+  braces:
+    max-spaces-inside: 1
+  # Both forms are rejected: file modes are written as quoted strings
+  # ("0644"), which is also what ansible-lint's own yamllint profile wants.
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+
+# Skip whatever git skips: the uv virtualenv and the Galaxy collections
+# installed under collections/ are third-party YAML we do not lint.
+ignore-from-file: .gitignore

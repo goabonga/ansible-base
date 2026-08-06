@@ -6,8 +6,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Code of Conduct
-    url: https://github.com/goabonga/ansible-base/blob/main/CODE_OF_CONDUCT.md
+    url: https://github.com/{{ cookiecutter.github_user }}/{{ cookiecutter.project_slug }}/blob/main/CODE_OF_CONDUCT.md
     about: Please read our Code of Conduct before contributing
   - name: Security advisories
-    url: https://github.com/goabonga/ansible-base/security/advisories/new
+    url: https://github.com/{{ cookiecutter.github_user }}/{{ cookiecutter.project_slug }}/security/advisories/new
     about: Report a vulnerability privately (do not open a public issue)

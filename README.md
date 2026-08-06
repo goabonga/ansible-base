@@ -1,184 +1,96 @@
 # ansible-base
 
 [![CI](https://github.com/goabonga/ansible-base/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/goabonga/ansible-base/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/goabonga/ansible-base.svg)](https://github.com/goabonga/ansible-base/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/goabonga/ansible-base/blob/main/LICENSE)
-[![Ansible](https://img.shields.io/badge/ansible--core-%E2%89%A5%202.18-blue.svg)](https://docs.ansible.com/)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![cookiecutter](https://img.shields.io/badge/cookiecutter-template-D4AA00.svg)](https://cookiecutter.readthedocs.io/)
 
-**Template repository.** The reusable skeleton behind every lab built on
-**disposable KVM/QEMU guests on your own workstation**: an isolated libvirt
-network, a dedicated SSH key, and guests booted from an Ubuntu cloud image
-with cloud-init. Everything is installed natively — `systemctl status`
-behaves the way you expect on a normal server.
+A [cookiecutter](https://cookiecutter.readthedocs.io/) template that generates
+a complete Ansible project for **disposable KVM/QEMU labs on a local
+workstation**: an isolated libvirt NAT network, a dedicated SSH keypair, and
+guests booted from a cloud image through cloud-init.
 
-```text
-   workstation (libvirt / qemu:///system)
-   ├── network ansible-lab  192.168.170.0/24  NAT
-   └── (guests declared in inventory/local.yml)
-```
+What you get is not a bare skeleton — the generated repository ships with the
+full toolchain already wired: uv, yamllint, ansible-lint at its `production`
+profile, ruff, pre-commit, SPDX header enforcement, Conventional-Commit
+releasing through [multicz](https://github.com/goabonga/multicz), signed
+Dependabot, and a GitHub Actions pipeline that lints, audits and releases.
 
-The host preparation and the guest factory ship here. The guests themselves,
-and what runs on them, come from the project you derive from this one.
-
-## Requirements
-
-- A Linux workstation with hardware virtualisation (`/dev/kvm`) and `sudo`
-- [uv](https://docs.astral.sh/uv/) — it installs Ansible and the linters
-- Internet access on the first run (the cloud image is ~600 MiB)
-
-The `kvm-host` playbook installs libvirt, QEMU and the rest on the
-workstation; nothing else has to be prepared by hand.
-
-## Using this template
-
-Start a new project from it — *Use this template* on GitHub, or clone and
-reset the history:
+## Usage
 
 ```bash
-git clone https://github.com/goabonga/ansible-base.git ansible-myproject
-cd ansible-myproject
-rm -rf .git && git init
+uvx cookiecutter gh:goabonga/ansible-base
 ```
 
-Then rename, in this order:
-
-| What | Where |
-| --- | --- |
-| Project name and description | `pyproject.toml` (`name`, `description`, `keywords`, `[project.urls]`) |
-| multicz component | `multicz.toml` — `[components.ansible-base]` |
-| Release version lookup | `.github/workflows/ci.yml` — `multicz get ansible-base` (2 occurrences) |
-| Lab identity | `inventory/group_vars/all.yml` — `lab_state_dir`, `lab_network_name`, `lab_network_bridge`, `lab_network_domain` |
-| Cloud-init marker | `roles/vm/templates/user-data.j2` — `/etc/ansible-base-lab` |
-| SSH key comment | `roles/kvm_host/defaults/main.yml` — `kvm_host_ssh_key_comment` |
-| Docs and badges | `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `.github/ISSUE_TEMPLATE/` |
-| Galaxy collections | `requirements.yml` — add what the new roles need |
-
-Give the lab its own network range too if you expect to run several labs side
-by side: `192.168.170.0/24` is the default here, and two projects sharing it
-will fight over the libvirt network.
-
-Finally, `uv lock` to refresh the lockfile with the new project name, and
-`git commit` as `feat: ...` so multicz cuts the first release.
-
-## Getting started
+Or from a local clone:
 
 ```bash
-uv sync                                                  # Ansible + linters
-uv run ansible-galaxy collection install -r requirements.yml
-
-uv run ansible-playbook playbooks/site.yml --ask-become-pass
+uvx cookiecutter /path/to/ansible-base
 ```
 
-If you prefer a plain shell, `source .venv/bin/activate` once and drop the
-`uv run` prefix from every command below.
+## Variables
 
-The sudo password is only used on the workstation (packages, libvirt, guest
-disks); the guests themselves are driven with a passwordless key that the
-first play generates in `~/.local/share/ansible-base/`.
+| Variable | Default | What it drives |
+| --- | --- | --- |
+| `project_name` | `Ansible Lab` | Human-readable name |
+| `project_slug` | derived from `project_name` | Directory, Python project name, multicz component |
+| `project_description` | … | `pyproject.toml`, README lead |
+| `author_name` / `author_email` | `Chris` / `goabonga@pm.me` | Authorship, SPDX headers, security contact |
+| `github_user` | `goabonga` | Repository URLs, badges, Galaxy role namespace |
+| `year` | `2026` | Copyright year in every SPDX header |
+| `lab_network_name` | `{{ project_slug }}` | libvirt network name |
+| `lab_network_bridge` | `virbr-lab` | Bridge interface (**max 15 characters**) |
+| `lab_network_domain` | `{{ project_slug }}.lab` | DNS domain handed to the guests |
+| `lab_network_subnet` | `192.168.170` | First three octets of the lab `/24` |
+| `lab_base_image` | `ubuntu-24.04-noble` | Cloud image and default guest user |
 
-## Declaring a guest
+`lab_base_image` also picks the unprivileged account cloud-init creates —
+`ubuntu` for the Ubuntu images, `debian` for the Debian one.
 
-Add it to the `lab` group and run `provision.yml`. The address is applied by
-cloud-init, so it only has to be inside the lab network and outside the DHCP
-range (`.100`–`.200`):
+Give each lab its own `lab_network_subnet` if you expect to run several side
+by side; two projects sharing a range will fight over the libvirt network.
 
-```yaml
-# inventory/local.yml
-lab:
-  children:
-    web:
-      hosts:
-        web-1:
-          vm_ip: 192.168.170.10
-          vm_mac: "52:54:00:17:0a:0a"
-          vm_memory_mb: 2048
-          vm_vcpus: 2
-          vm_disk_size: 20G
-```
+## Validation
 
-Each guest boots a thin qcow2 overlay on the shared base image, so a new one
-costs seconds and a few MiB.
+`hooks/pre_gen_project.py` rejects bad answers **before** any file is written:
+a `project_slug` that is not a usable Python project name, a
+`lab_network_bridge` longer than the kernel's `IFNAMSIZ` limit of 15
+characters, or a malformed subnet. You get an error message instead of a
+project that only fails later, deep inside a libvirt call.
 
-## Playbooks
+## How the Jinja conflict is handled
 
-| Playbook | What it does |
-| --- | --- |
-| `playbooks/site.yml` | The whole lab, in order |
-| `playbooks/kvm-host.yml` | Workstation: packages, libvirt, lab keypair, NAT network |
-| `playbooks/provision.yml` | Creates the guests and waits for cloud-init |
-| `playbooks/destroy.yml` | Removes the guests, their disks and their seeds |
+Ansible and cookiecutter both use `{{ ... }}`, so rendering the Ansible
+sources through cookiecutter would destroy every `{{ lab_state_dir }}` and
+`{{ inventory_hostname }}` in the tree. This template deals with it in three
+layers:
 
-A derived project adds its own playbooks after `provision.yml` and wires them
-into `site.yml`.
+1. **`_copy_without_render`** — the roles, the playbooks and the `.j2`
+   templates are copied verbatim. They contain no cookiecutter variables, so
+   they lose nothing.
+2. **`{% raw %}` guards** — `inventory/group_vars/all.yml` and
+   `.github/workflows/ci.yml` genuinely need both syntaxes. Their Ansible and
+   GitHub expressions sit inside `raw` blocks; only the handful of
+   cookiecutter substitutions stay live.
+3. **`hooks/post_gen_project.py`** — because the verbatim-copied files never
+   pass through Jinja, their SPDX copyright line would still name the template
+   author. The hook rewrites it across the whole generated tree, which is what
+   keeps `scripts/add_license_header.py --check` green in the generated CI.
 
-Rebuild from scratch (the base cloud image is kept, so it takes seconds):
+The upshot: the Ansible sources stay readable, with no `{% raw %}` noise
+scattered through them.
+
+## Developing the template
 
 ```bash
-uv run ansible-playbook playbooks/destroy.yml --ask-become-pass
-uv run ansible-playbook playbooks/site.yml --ask-become-pass
+uv run pytest                    # generates a project and lints it
+uvx cookiecutter --no-input .    # generate with the defaults, by hand
 ```
 
-Add `-e lab_destroy_network=true` to remove the libvirt network as well.
-
-## Customising
-
-Everything lives in the inventory; the roles only hold defaults.
-
-| File | Typical change |
-| --- | --- |
-| `inventory/local.yml` | Guests: sizing, addresses, groups |
-| `inventory/group_vars/all.yml` | Network plan, base image, lab paths |
-
-**Different image** — point `lab_image_url` and `lab_image_checksum_url` at
-another cloud image; anything cloud-init based and Debian-flavoured works.
-
-## Layout
-
-```text
-ansible-base/
-├── ansible.cfg
-├── inventory/
-│   ├── local.yml              # the guests and the workstation
-│   └── group_vars/
-├── playbooks/
-├── roles/
-│   ├── kvm_host/              # libvirt, lab keypair, NAT network
-│   └── vm/                    # cloud image overlay + NoCloud seed + domain
-├── requirements.yml           # Galaxy collections
-└── multicz.toml               # versioning and changelog
-```
-
-## Development
-
-```bash
-uv run yamllint --strict .
-uv run ansible-lint
-uv run ansible-playbook --syntax-check playbooks/*.yml
-uv run pre-commit install      # pre-commit + commit-msg hooks
-```
-
-`ansible-lint` runs at its `production` profile, and the same gates run in CI
-on Python 3.11 and 3.12.
-
-## Versioning and release
-
-Versions are bumped from
-[Conventional Commits](https://www.conventionalcommits.org/) by
-[multicz](https://github.com/goabonga/multicz). On every push to `main`, CI
-computes the bump, writes the changelog, tags and creates the GitHub release.
-Only changes under `roles/`, `playbooks/`, `inventory/`, `ansible.cfg`,
-`requirements.yml` and `pyproject.toml` count as releasable. Maintainers do not
-bump versions or edit the changelog by hand.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, the commit-message
-convention, and the lint expectations. By participating you agree to the
-[Code of Conduct](CODE_OF_CONDUCT.md).
-
-Security issues: please follow the disclosure process in
-[SECURITY.md](SECURITY.md).
+The CI pipeline generates a project from the defaults and then runs that
+project's own gates against it — yamllint, ansible-lint, the playbook
+syntax-check and the SPDX header check. A template that produces a repository
+failing its own lint suite is a broken template, so the test suite is the
+contract.
 
 ## License
 

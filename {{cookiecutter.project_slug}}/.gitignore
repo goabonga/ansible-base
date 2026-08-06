@@ -9,6 +9,3 @@ __pycache__/
 .cache/
 collections/
 roles/galaxy/
-
-# Projects generated locally while testing the template.
-/_test-output/

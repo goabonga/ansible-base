@@ -3,7 +3,7 @@
 ## Supported versions
 
 Security fixes are applied only to the latest released version on the
-`main` branch (and the matching release of `ansible-base`).
+`main` branch (and the matching release of `{{ cookiecutter.project_slug }}`).
 
 | Version | Supported |
 | --- | --- |
@@ -20,7 +20,7 @@ is the preferred channel:
 2. Click **Report a vulnerability**.
 3. Describe the issue with reproduction steps and a suggested mitigation.
 
-If you cannot use GitHub's form, email **goabonga@pm.me** with the same
+If you cannot use GitHub's form, email **{{ cookiecutter.author_email }}** with the same
 information. PGP encryption is available on request.
 
 You can expect an acknowledgement within **3 business days**, a triage
@@ -29,7 +29,7 @@ plan before any public disclosure.
 
 ## Scope
 
-`ansible-base` provisions a **local, throwaway** lab: KVM guests on an
+`{{ cookiecutter.project_slug }}` provisions a **local, throwaway** lab: KVM guests on an
 isolated NAT network, reachable only from the workstation that created them.
 The defaults shipped in `inventory/group_vars/` are deliberately permissive
 for that setting.

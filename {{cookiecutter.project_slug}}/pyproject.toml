@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# This repository ships Ansible content, not a Python distribution. The
+# project metadata exists so `uv` can manage the toolchain (ansible-core,
+# ansible-lint, yamllint, ruff for scripts/) and so multicz has a single
+# place to write the version. `package = false` keeps uv from trying to
+# build a wheel.
+
+[project]
+name = "{{ cookiecutter.project_slug }}"
+version = "0.0.0"
+description = "{{ cookiecutter.project_description }}"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "{{ cookiecutter.author_name }}", email = "{{ cookiecutter.author_email }}" }]
+keywords = ["ansible", "kvm", "libvirt", "qemu", "cloud-init", "template"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Installation/Setup",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/{{ cookiecutter.github_user }}/{{ cookiecutter.project_slug }}"
+Repository = "https://github.com/{{ cookiecutter.github_user }}/{{ cookiecutter.project_slug }}"
+Issues = "https://github.com/{{ cookiecutter.github_user }}/{{ cookiecutter.project_slug }}/issues"
+Changelog = "https://github.com/{{ cookiecutter.github_user }}/{{ cookiecutter.project_slug }}/blob/main/CHANGELOG.md"
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "ansible-core>=2.18",
+    "ansible-lint>=25",
+    "yamllint>=1.35",
+    "ruff>=0.13",
+    "pre-commit>=4",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

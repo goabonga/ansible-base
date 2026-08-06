@@ -3,10 +3,10 @@
 ---
 
 galaxy_info:
-  role_name: kvm_host
-  namespace: goabonga
-  author: Chris
-  description: Prepare the local workstation to run a KVM/QEMU lab.
+  role_name: vm
+  namespace: {{ cookiecutter.github_user }}
+  author: {{ cookiecutter.author_name }}
+  description: Provision a cloud-init libvirt guest from an Ubuntu cloud image.
   license: MIT
   min_ansible_version: "2.16"
   platforms:

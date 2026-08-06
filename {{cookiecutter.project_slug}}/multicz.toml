@@ -42,7 +42,7 @@ types = ["fix"]
 title = "Performance"
 types = ["perf"]
 
-[components.ansible-base]
+[components.{{ cookiecutter.project_slug }}]
 # Curated: only the Ansible content and the files that define how it runs
 # count toward a release. Documentation, governance, CI and tooling config
 # are intentionally untracked, so a README fix never ships a version.

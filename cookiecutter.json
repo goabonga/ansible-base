@@ -1,0 +1,27 @@
+{
+    "project_name": "Ansible Lab",
+    "project_slug": "{{ cookiecutter.project_name|lower|replace(' ', '-')|replace('_', '-') }}",
+    "project_description": "Ansible project provisioning a disposable KVM/QEMU lab on a local workstation.",
+    "author_name": "Chris",
+    "author_email": "goabonga@pm.me",
+    "github_user": "goabonga",
+    "year": "2026",
+    "lab_network_name": "{{ cookiecutter.project_slug }}",
+    "lab_network_bridge": "virbr-lab",
+    "lab_network_domain": "{{ cookiecutter.project_slug }}.lab",
+    "lab_network_subnet": "192.168.170",
+    "lab_base_image": [
+        "ubuntu-24.04-noble",
+        "ubuntu-22.04-jammy",
+        "debian-12-bookworm"
+    ],
+    "_copy_without_render": [
+        "playbooks/*",
+        "roles/*/defaults/*",
+        "roles/*/handlers/*",
+        "roles/*/tasks/*",
+        "roles/*/templates/*",
+        "inventory/group_vars/lab.yml",
+        ".github/workflows/dependabot-rewrite.yml"
+    ]
+}

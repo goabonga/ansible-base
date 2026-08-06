@@ -1,4 +1,4 @@
-# Contributing to ansible-base
+# Contributing to {{ cookiecutter.project_slug }}
 
 Thanks for taking the time to contribute. This document is the short version
 of how to propose a change and what the project expects in return.
@@ -12,8 +12,8 @@ its terms.
 ## Development setup
 
 ```bash
-git clone https://github.com/goabonga/ansible-base.git
-cd ansible-base
+git clone https://github.com/{{ cookiecutter.github_user }}/{{ cookiecutter.project_slug }}.git
+cd {{ cookiecutter.project_slug }}
 uv sync
 uv run pre-commit install   # installs the pre-commit + commit-msg hooks
 uv run ansible-galaxy collection install -r requirements.yml

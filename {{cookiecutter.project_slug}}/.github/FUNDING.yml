@@ -3,4 +3,4 @@
 
 ---
 
-github: [goabonga]
+github: [{{ cookiecutter.github_user }}]
