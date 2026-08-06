@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Creates the guests. The first play talks to libvirt on the workstation
+# (hence `connection: local`) while iterating over the guest inventory; the
+# second play waits for each guest to finish its first boot.
+---
+
+- name: Provision the lab guests
+  hosts: lab
+  gather_facts: false
+  connection: local
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  roles:
+    - role: vm
+
+- name: Wait for the guests to finish their first boot
+  hosts: lab
+  gather_facts: false
+  tasks:
+    - name: Wait for the lab SSH key to be accepted
+      ansible.builtin.wait_for_connection:
+        timeout: 600
+        sleep: 5
+
+    - name: Wait for cloud-init to settle
+      become: true
+      ansible.builtin.command:
+        cmd: cloud-init status --wait
+      register: provision_cloud_init
+      # 2 is "done, with recoverable warnings" - common on a NAT-only guest
+      # and not worth failing the run over.
+      failed_when: provision_cloud_init.rc not in [0, 2]
+      changed_when: false
+
+    - name: Gather the guest facts
+      ansible.builtin.setup:

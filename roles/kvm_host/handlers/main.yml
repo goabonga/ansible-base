@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+---
+
+# A fresh group membership only applies to new login sessions, so the very
+# first run may still hit a libvirt permission error.
+- name: Report the new group membership
+  ansible.builtin.debug:
+    msg: >-
+      {{ kvm_host_user }} was added to
+      {{ kvm_host_user_groups | join(', ') }}. Log out and back in (or run
+      `newgrp libvirt`) if virsh reports a permission error.

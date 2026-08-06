@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Galaxy dependencies. Install with:
+#   uv run ansible-galaxy collection install -r requirements.yml
+---
+
+collections:
+  # virt / virt_net: define, start and destroy libvirt domains and networks.
+  - name: community.libvirt
+    version: ">=1.3.0"
+  # openssh_keypair: the dedicated lab SSH key injected through cloud-init.
+  - name: community.crypto
+    version: ">=2.20.0"
+  # sysctl, seboolean and other host-level helpers.
+  - name: ansible.posix
+    version: ">=1.5.0"

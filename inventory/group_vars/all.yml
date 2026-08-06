@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Lab-wide settings shared by the KVM host and every guest.
+---
+
+# Where the generated lab artefacts live on the workstation: the dedicated
+# SSH keypair and the cloud image checksum. Guest disks and cloud-init seeds
+# live in `lab_libvirt_images_dir` because libvirt/AppArmor already allow
+# qemu to read that path.
+lab_state_dir: "{{ lookup('ansible.builtin.env', 'HOME') }}/.local/share/ansible-base"
+lab_libvirt_uri: qemu:///system
+lab_libvirt_images_dir: /var/lib/libvirt/images
+
+# Isolated NAT network for the lab. Guests get static addresses through
+# cloud-init, so the DHCP range only serves guests created by hand.
+lab_network_name: ansible-lab
+lab_network_bridge: virbr-lab
+lab_network_domain: ansible.lab
+lab_network_gateway: 192.168.170.1
+lab_network_netmask: 255.255.255.0
+lab_network_prefix: 24
+lab_network_dhcp_start: 192.168.170.100
+lab_network_dhcp_end: 192.168.170.200
+lab_network_nameservers:
+  - 192.168.170.1
+
+# Guest base image: Ubuntu 24.04 LTS (noble) cloud image.
+lab_image_name: noble-server-cloudimg-amd64.img
+lab_image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+lab_image_checksum_url: https://cloud-images.ubuntu.com/noble/current/SHA256SUMS
+
+# Unprivileged account created by cloud-init and used by Ansible.
+lab_vm_user: ubuntu
+lab_ssh_key_path: "{{ lab_state_dir }}/id_ed25519"
+lab_timezone: Etc/UTC

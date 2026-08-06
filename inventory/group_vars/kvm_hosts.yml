@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# The workstation is driven over the local connection. The system
+# interpreter is pinned because the libvirt and lxml bindings come from
+# apt (python3-libvirt, python3-lxml) and are not visible from the uv
+# virtualenv that runs ansible-playbook.
+---
+
+ansible_connection: local
+ansible_python_interpreter: /usr/bin/python3

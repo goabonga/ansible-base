@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+---
+
+# Rebuilds the seed ISO after a cloud-init change. Note that NoCloud only
+# replays user-data on a fresh instance: an existing guest keeps its current
+# configuration until it is recreated (`playbooks/destroy.yml`).
+- name: Rebuild the cloud-init seed ISO
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      genisoimage -output {{ vm_seed_iso }}
+      -volid cidata -joliet -rock
+      meta-data user-data network-config
+    chdir: "{{ vm_seed_dir }}"
+  changed_when: true

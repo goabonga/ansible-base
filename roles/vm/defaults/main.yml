@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+---
+
+vm_libvirt_uri: "{{ lab_libvirt_uri }}"
+vm_images_dir: "{{ lab_libvirt_images_dir }}"
+vm_state_dir: "{{ lab_state_dir }}"
+
+# Base cloud image, shared read-only by every guest: each guest boots a thin
+# qcow2 overlay backed by it, so a new guest costs seconds and a few MiB.
+vm_base_image_name: "{{ lab_image_name }}"
+vm_base_image_url: "{{ lab_image_url }}"
+vm_base_image_checksum_url: "{{ lab_image_checksum_url }}"
+vm_base_image_path: "{{ vm_images_dir }}/{{ vm_base_image_name }}"
+
+vm_disk_path: "{{ vm_images_dir }}/{{ inventory_hostname }}.qcow2"
+vm_seed_dir: "{{ vm_images_dir }}/{{ inventory_hostname }}-seed"
+vm_seed_iso: "{{ vm_images_dir }}/{{ inventory_hostname }}-seed.iso"
+
+# Hardware sizing; override per host in the inventory.
+vm_memory_mb: 2048
+vm_vcpus: 2
+vm_disk_size: 20G
+
+# Guest identity and network, applied by cloud-init on first boot.
+vm_user: "{{ lab_vm_user }}"
+vm_ssh_public_key: "{{ lookup('ansible.builtin.file', lab_ssh_key_path ~ '.pub') }}"
+vm_network_name: "{{ lab_network_name }}"
+vm_network_domain: "{{ lab_network_domain }}"
+vm_network_prefix: "{{ lab_network_prefix }}"
+vm_network_gateway: "{{ lab_network_gateway }}"
+vm_network_nameservers: "{{ lab_network_nameservers }}"
+vm_timezone: "{{ lab_timezone }}"
+vm_packages:
+  - qemu-guest-agent
+
+vm_autostart: true
+vm_wait_for_ssh: true
+vm_ssh_timeout: 600

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+#
+# netplan v2 config matched on the pinned MAC, so the interface name the
+# guest happens to pick (enp1s0, ens3, ...) does not matter.
+version: 2
+ethernets:
+  lab:
+    match:
+      macaddress: "{{ vm_mac }}"
+    dhcp4: false
+    dhcp6: false
+    addresses:
+      - {{ vm_ip }}/{{ vm_network_prefix }}
+    routes:
+      - to: default
+        via: {{ vm_network_gateway }}
+    nameservers:
+      addresses:
+{% for nameserver in vm_network_nameservers %}
+        - {{ nameserver }}
+{% endfor %}
+      search:
+        - {{ vm_network_domain }}

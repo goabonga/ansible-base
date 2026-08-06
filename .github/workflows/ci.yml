@@ -1,0 +1,217 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+---
+
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+          python-version: "3.12"
+      - run: uv sync --frozen --only-group dev
+      # --strict so warnings (long lines, missing document start) fail here
+      # exactly as they do in the pre-commit hook.
+      - run: uv run --no-sync yamllint --strict .
+      - run: uv run --no-sync ruff check --output-format=github scripts
+      - run: uv run --no-sync ruff format --check scripts
+
+  ansible:
+    # Both interpreters the project supports resolve a different ansible-core
+    # (2.19 on 3.11, 2.21 on 3.12), so the content is checked against both.
+    name: ansible (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}-${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --frozen --only-group dev
+      - name: Install the Galaxy collections
+        run: uv run --no-sync ansible-galaxy collection install -r requirements.yml -p collections
+      - name: Run ansible-lint
+        run: uv run --no-sync ansible-lint
+      - name: Syntax-check every playbook
+        run: uv run --no-sync ansible-playbook --syntax-check playbooks/*.yml
+
+  license-headers:
+    name: license-headers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+          python-version: "3.12"
+      - name: Check SPDX headers
+        run: |
+          uv run --no-project python scripts/add_license_header.py --path roles --types yml --check
+          uv run --no-project python scripts/add_license_header.py --path playbooks --types yml --check
+          uv run --no-project python scripts/add_license_header.py --path inventory --types yml --check
+          uv run --no-project python scripts/add_license_header.py --path scripts --types py,sh --check
+          uv run --no-project python scripts/add_license_header.py --path .github --types yml --check
+          uv run --no-project python scripts/add_license_header.py --path . --types toml,cfg --check
+
+  bandit:
+    name: bandit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+          python-version: "3.12"
+      - run: uvx bandit --recursive scripts
+
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uvx pip-audit --skip-editable --path .venv
+
+  osv-scanner:
+    name: osv-scanner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install OSV-Scanner
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL \
+            "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64" \
+            -o "$HOME/.local/bin/osv-scanner"
+          chmod +x "$HOME/.local/bin/osv-scanner"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: osv-scanner scan source --lockfile=uv.lock
+
+  release:
+    name: release
+    needs: [lint, ansible, license-headers, bandit, pip-audit, osv-scanner]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      # NOTE: no python-version pin here - multicz needs Python >=3.12 and
+      # `uv tool install multicz` fails under 3.11.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+      - name: Install multicz
+        run: uv tool install multicz
+      - name: Configure git author
+        run: |
+          NAME="${{ github.event.head_commit.author.name }}"
+          EMAIL="${{ github.event.head_commit.author.email }}"
+          git config user.name  "${NAME:-github-actions[bot]}"
+          git config user.email "${EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}"
+      - name: Detect GPG availability
+        id: gpg
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [ -n "$GPG_PRIVATE_KEY" ] && [ -n "$GPG_PASSPHRASE" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Import and unlock GPG key
+        if: steps.gpg.outputs.available == 'true'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo test | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+            --pinentry-mode loopback --sign > /dev/null
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
+          git config user.signingkey "$KEY_ID"
+      - name: Plan release
+        run: uv tool run multicz plan --summary "$GITHUB_STEP_SUMMARY"
+      - name: Bump, commit, tag, push (signed)
+        id: bump_signed
+        if: steps.gpg.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          PLAN=$(uv tool run multicz bump --commit --tag --push --sign --output json)
+          BUMPED=$(echo "$PLAN" | jq -r '.bumps | keys | join(" ")')
+          if [ -z "$BUMPED" ]; then
+            echo "no_bumps=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no_bumps=false" >> "$GITHUB_OUTPUT"
+            echo "version=$(uv tool run multicz get ansible-base)" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Bump, commit, tag, push
+        id: bump_unsigned
+        if: steps.gpg.outputs.available != 'true'
+        run: |
+          set -euo pipefail
+          PLAN=$(uv tool run multicz bump --commit --tag --push --output json)
+          BUMPED=$(echo "$PLAN" | jq -r '.bumps | keys | join(" ")')
+          if [ -z "$BUMPED" ]; then
+            echo "no_bumps=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no_bumps=false" >> "$GITHUB_OUTPUT"
+            echo "version=$(uv tool run multicz get ansible-base)" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Resolve release outputs
+        id: bump
+        run: |
+          if [ "${{ steps.gpg.outputs.available }}" = "true" ]; then
+            echo 'no_bumps=${{ steps.bump_signed.outputs.no_bumps }}' >> "$GITHUB_OUTPUT"
+            echo 'version=${{ steps.bump_signed.outputs.version }}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'no_bumps=${{ steps.bump_unsigned.outputs.no_bumps }}' >> "$GITHUB_OUTPUT"
+            echo 'version=${{ steps.bump_unsigned.outputs.version }}' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create the GitHub release
+        if: steps.bump.outputs.no_bumps == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.bump.outputs.version }}"
+          # Same tag multicz created (tag_format = "v{version}").
+          tag="v${version}"
+          notes=$(uv tool run multicz release-notes --tag "$tag")
+          gh release create "$tag" --title "$tag" --notes "$notes"

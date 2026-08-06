@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# ansible-lint configuration. Run with `uv run ansible-lint`.
+---
+
+profile: production
+
+exclude_paths:
+  - .cache/
+  - .venv/
+  - .github/
+
+# The roles live in-tree and are consumed by path, so the galaxy metadata
+# rules (which expect a published collection) do not apply.
+skip_list:
+  - galaxy[no-changelog]
+  - galaxy[version-incorrect]
+
+mock_roles:
+  - kvm_host
+  - vm

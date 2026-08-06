@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Static inventory of the local KVM/QEMU lab.
+#
+#   kvm_hosts : the workstation running libvirt (this machine).
+#   lab       : the guests. Each one declares its own hardware sizing and its
+#               static address; cloud-init applies the address, so adding a
+#               guest needs no libvirt DHCP change as long as the IP stays
+#               inside the lab network and outside the DHCP range.
+#
+# The group starts empty on purpose: this inventory is the reusable skeleton,
+# and every feature brings the guests it needs.
+---
+
+all:
+  children:
+    kvm_hosts:
+      hosts:
+        localhost: {}
+
+    lab:
+      hosts: {}
+      # Copy this block per guest, under a group of its own:
+      #
+      # children:
+      #   web:
+      #     hosts:
+      #       web-1:
+      #         vm_ip: 192.168.170.10
+      #         vm_mac: "52:54:00:17:0a:0a"
+      #         vm_memory_mb: 2048
+      #         vm_vcpus: 2
+      #         vm_disk_size: 20G

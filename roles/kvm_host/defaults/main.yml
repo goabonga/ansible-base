@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+---
+
+# Packages needed to run the lab: KVM/QEMU itself, the libvirt daemon, the
+# python bindings used by the community.libvirt modules, qemu-img for the
+# guest overlays and genisoimage for the cloud-init seed ISOs.
+kvm_host_packages:
+  - qemu-kvm
+  - qemu-utils
+  - libvirt-daemon-system
+  - libvirt-clients
+  - genisoimage
+  - python3-libvirt
+  - python3-lxml
+
+# Set to false when the workstation is already provisioned and you would
+# rather not hand Ansible a sudo password.
+kvm_host_install_packages: true
+kvm_host_service: libvirtd
+
+# Local account that owns the lab keypair and needs libvirt access.
+kvm_host_user: "{{ lookup('ansible.builtin.env', 'USER') }}"
+kvm_host_manage_user_groups: true
+kvm_host_user_groups:
+  - libvirt
+  - kvm
+
+kvm_host_state_dir: "{{ lab_state_dir }}"
+kvm_host_ssh_key_path: "{{ lab_ssh_key_path }}"
+kvm_host_ssh_key_type: ed25519
+kvm_host_ssh_key_comment: ansible-base lab
+
+kvm_host_libvirt_uri: "{{ lab_libvirt_uri }}"
+kvm_host_images_dir: "{{ lab_libvirt_images_dir }}"
+kvm_host_network_name: "{{ lab_network_name }}"
+kvm_host_network_bridge: "{{ lab_network_bridge }}"
+kvm_host_network_domain: "{{ lab_network_domain }}"
+kvm_host_network_gateway: "{{ lab_network_gateway }}"
+kvm_host_network_netmask: "{{ lab_network_netmask }}"
+kvm_host_network_dhcp_start: "{{ lab_network_dhcp_start }}"
+kvm_host_network_dhcp_end: "{{ lab_network_dhcp_end }}"

@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Tears one guest down: stop it, drop its definition, then remove the
+# overlay disk and the cloud-init seed. The shared base image is left alone
+# so the next `provision.yml` does not download it again.
+# Used through `playbooks/destroy.yml`.
+---
+
+- name: List the running domains
+  become: true
+  community.libvirt.virt:
+    command: list_vms
+    state: running
+    uri: "{{ vm_libvirt_uri }}"
+  register: vm_running_domains
+  changed_when: false
+
+- name: Stop the guest
+  become: true
+  community.libvirt.virt:
+    name: "{{ inventory_hostname }}"
+    command: destroy
+    uri: "{{ vm_libvirt_uri }}"
+  when: inventory_hostname in vm_running_domains.list_vms
+
+- name: List the defined domains
+  become: true
+  community.libvirt.virt:
+    command: list_vms
+    uri: "{{ vm_libvirt_uri }}"
+  register: vm_defined_domains
+  changed_when: false
+
+- name: Undefine the guest
+  become: true
+  community.libvirt.virt:
+    name: "{{ inventory_hostname }}"
+    command: undefine
+    uri: "{{ vm_libvirt_uri }}"
+  when: inventory_hostname in vm_defined_domains.list_vms
+
+- name: Remove the guest disk and cloud-init seed
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ vm_disk_path }}"
+    - "{{ vm_seed_iso }}"
+    - "{{ vm_seed_dir }}"

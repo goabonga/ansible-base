@@ -1,0 +1,95 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Turns the workstation into a usable lab host: virtualisation packages,
+# a running libvirt daemon, the dedicated lab keypair and the isolated NAT
+# network the guests attach to.
+---
+
+- name: Install the virtualisation packages
+  become: true
+  ansible.builtin.apt:
+    name: "{{ kvm_host_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: kvm_host_install_packages
+  tags:
+    - packages
+
+- name: Ensure the libvirt daemon is running
+  become: true
+  ansible.builtin.systemd_service:
+    name: "{{ kvm_host_service }}"
+    state: started
+    enabled: true
+
+- name: Check that hardware virtualisation is available
+  ansible.builtin.stat:
+    path: /dev/kvm
+  register: kvm_host_kvm_device
+
+- name: Fail early when /dev/kvm is missing
+  ansible.builtin.assert:
+    that:
+      - kvm_host_kvm_device.stat.exists
+    fail_msg: >-
+      /dev/kvm is missing: enable VT-x/AMD-V in the firmware, or the guests
+      will fall back to software emulation and be unusably slow.
+
+- name: Add the local user to the virtualisation groups
+  become: true
+  ansible.builtin.user:
+    name: "{{ kvm_host_user }}"
+    groups: "{{ kvm_host_user_groups }}"
+    append: true
+  when: kvm_host_manage_user_groups
+  notify: Report the new group membership
+
+- name: Create the lab state directory
+  ansible.builtin.file:
+    path: "{{ kvm_host_state_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Generate the lab SSH keypair
+  community.crypto.openssh_keypair:
+    path: "{{ kvm_host_ssh_key_path }}"
+    type: "{{ kvm_host_ssh_key_type }}"
+    comment: "{{ kvm_host_ssh_key_comment }}"
+    mode: "0600"
+
+- name: Ensure the libvirt image directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ kvm_host_images_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0711"
+
+- name: Define the lab libvirt network
+  become: true
+  community.libvirt.virt_net:
+    command: define
+    name: "{{ kvm_host_network_name }}"
+    xml: "{{ lookup('ansible.builtin.template', 'network.xml.j2') }}"
+    uri: "{{ kvm_host_libvirt_uri }}"
+
+- name: Start the lab libvirt network
+  become: true
+  community.libvirt.virt_net:
+    name: "{{ kvm_host_network_name }}"
+    state: active
+    uri: "{{ kvm_host_libvirt_uri }}"
+
+# Separate call on purpose: community.libvirt.virt_net returns as soon as it
+# has handled `state`, so an `autostart` passed in the same task is silently
+# dropped and the network stays disabled at boot. (virt, for domains, checks
+# autostart first and does not have the problem.)
+- name: Enable the lab libvirt network at boot
+  become: true
+  community.libvirt.virt_net:
+    name: "{{ kvm_host_network_name }}"
+    autostart: true
+    uri: "{{ kvm_host_libvirt_uri }}"

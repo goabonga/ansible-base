@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Removes the guests, their disks and their cloud-init seeds. The shared base
+# image stays, so rebuilding is fast.
+#
+#   uv run ansible-playbook playbooks/destroy.yml --ask-become-pass
+#
+# The lab network survives unless you ask for it explicitly:
+#
+#   ... playbooks/destroy.yml -e lab_destroy_network=true
+---
+
+- name: Destroy the lab guests
+  hosts: lab
+  gather_facts: false
+  connection: local
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Tear the guest down
+      ansible.builtin.include_role:
+        name: vm
+        tasks_from: destroy.yml
+
+- name: Remove the lab network
+  hosts: kvm_hosts
+  gather_facts: false
+  tasks:
+    - name: Stop and undefine the lab network
+      become: true
+      community.libvirt.virt_net:
+        name: "{{ lab_network_name }}"
+        state: absent
+        uri: "{{ lab_libvirt_uri }}"
+      when: lab_destroy_network | default(false) | bool

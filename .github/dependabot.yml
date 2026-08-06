@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Dependabot v2 configuration.
+---
+
+version: 2
+
+updates:
+  # The Ansible toolchain, managed by uv.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    groups:
+      # Bundle routine tooling bumps into a single weekly PR. The signed
+      # rewrite keys "dev-tools group" -> chore(deps).
+      dev-tools:
+        applies-to: version-updates
+        patterns:
+          - "ansible-core"
+          - "ansible-lint"
+          - "yamllint"
+          - "ruff"
+          - "pre-commit"
+    # Everything here is tooling for developing the playbooks, nothing is
+    # shipped to a consumer, so bumps land as chore(deps) and never trigger a
+    # release. The rewrite script confirms this from [dependency-groups].dev.
+    commit-message:
+      prefix: "fix(deps)"
+      prefix-development: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Pinned versions of GitHub Actions in `.github/workflows/*.yml`.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    groups:
+      ci-actions:
+        applies-to: version-updates
+        patterns:
+          - "actions/*"
+          - "astral-sh/*"
+          - "google/*"
+          - "compilerla/*"
+          - "pre-commit/*"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"

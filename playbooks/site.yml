@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Full lab, from a bare workstation to running guests:
+#
+#   uv run ansible-playbook playbooks/site.yml --ask-become-pass
+#
+# The sudo password is only needed for the host-side plays (packages,
+# libvirt, guest disks); the guest account is passwordless.
+---
+
+- name: Prepare the KVM host
+  ansible.builtin.import_playbook: kvm-host.yml
+
+- name: Provision the lab guests
+  ansible.builtin.import_playbook: provision.yml

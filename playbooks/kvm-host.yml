@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Host-side prerequisites: virtualisation packages, libvirt, the lab keypair
+# and the isolated NAT network. Needs sudo (--ask-become-pass).
+---
+
+- name: Prepare the workstation for the lab
+  hosts: kvm_hosts
+  gather_facts: true
+  roles:
+    - role: kvm_host

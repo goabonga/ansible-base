@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+---
+
+galaxy_info:
+  role_name: vm
+  namespace: goabonga
+  author: Chris
+  description: Provision a cloud-init libvirt guest from an Ubuntu cloud image.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies: []

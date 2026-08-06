@@ -1,0 +1,114 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Local pre-commit configuration mirroring the CI quality gates.
+# Install once per clone: `uv run pre-commit install` (installs the
+# pre-commit AND commit-msg hooks). Run on the whole tree:
+# `uv run pre-commit run --all-files`.
+---
+
+default_install_hook_types: [pre-commit, commit-msg]
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+  - repo: local
+    hooks:
+      - id: yamllint
+        name: yamllint
+        entry: uv run yamllint --strict
+        language: system
+        types: [yaml]
+        require_serial: true
+
+      - id: ansible-lint
+        name: ansible-lint
+        entry: uv run ansible-lint
+        language: system
+        pass_filenames: false
+        files: ^(roles|playbooks|inventory)/.*\.ya?ml$
+        require_serial: true
+
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        require_serial: true
+
+  - repo: local
+    hooks:
+      - id: spdx-headers-roles
+        name: SPDX headers (roles/)
+        entry: uv run python scripts/add_license_header.py --path roles --types yml --check
+        language: system
+        pass_filenames: false
+        files: ^roles/.*\.ya?ml$
+      - id: spdx-headers-playbooks
+        name: SPDX headers (playbooks/)
+        entry: uv run python scripts/add_license_header.py --path playbooks --types yml --check
+        language: system
+        pass_filenames: false
+        files: ^playbooks/.*\.ya?ml$
+      - id: spdx-headers-inventory
+        name: SPDX headers (inventory/)
+        entry: uv run python scripts/add_license_header.py --path inventory --types yml --check
+        language: system
+        pass_filenames: false
+        files: ^inventory/.*\.ya?ml$
+      - id: spdx-headers-scripts
+        name: SPDX headers (scripts/)
+        entry: uv run python scripts/add_license_header.py --path scripts --types py,sh --check
+        language: system
+        pass_filenames: false
+        files: ^scripts/.*\.(py|sh)$
+      - id: spdx-headers-workflows
+        name: SPDX headers (.github/)
+        entry: uv run python scripts/add_license_header.py --path .github --types yml --check
+        language: system
+        pass_filenames: false
+        files: ^\.github/.*\.ya?ml$
+      - id: spdx-headers-root-config
+        name: SPDX headers (root config)
+        entry: uv run python scripts/add_license_header.py --path . --types toml,cfg --check
+        language: system
+        pass_filenames: false
+        files: ^[^/]+\.(toml|cfg)$
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - feat
+          - fix
+          - perf
+          - refactor
+          - docs
+          - test
+          - chore
+          - ci
+          - build
+          - style
+          - deprecate
+          - remove

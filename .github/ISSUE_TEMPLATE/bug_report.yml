@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+---
+
+name: Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill in the details below.
+
+  - type: input
+    id: version
+    attributes:
+      label: ansible-base version
+      description: "Tag or commit you are running (`git describe --always`)."
+    validations:
+      required: true
+
+  - type: input
+    id: ansible-version
+    attributes:
+      label: Ansible version
+      description: "First line of `uv run ansible --version`."
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: >-
+        Which playbook did you run, with which extra variables? Include the
+        exact command line.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where did it fail?
+      options:
+        - Host preparation (playbooks/kvm-host.yml)
+        - Guest provisioning (playbooks/provision.yml)
+        - Teardown (playbooks/destroy.yml)
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: host-os
+    attributes:
+      label: Workstation OS and libvirt version
+      description: "For example: Ubuntu 24.04, libvirt 10.0.0 (`virsh --version`)."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Ansible output / logs
+      description: >-
+        The failing task with `-vv` if possible. For guest-side failures,
+        `cloud-init status --long` and `journalctl -u cloud-final` often help.
+      render: shell

@@ -1,0 +1,63 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- Copyright (c) 2026 Chris <goabonga@pm.me> -#}
+{#-
+  Minimal virtio guest: overlay disk on virtio-blk, the NoCloud seed as a
+  read-only CD-ROM, one interface on the lab network with a pinned MAC (so
+  cloud-init's network-config can match it), a serial console for
+  `virsh console` and a VNC socket bound to loopback.
+-#}
+<domain type="kvm">
+  <name>{{ inventory_hostname }}</name>
+  <title>{{ inventory_hostname }}.{{ vm_network_domain }}</title>
+  <memory unit="MiB">{{ vm_memory_mb }}</memory>
+  <currentMemory unit="MiB">{{ vm_memory_mb }}</currentMemory>
+  <vcpu placement="static">{{ vm_vcpus }}</vcpu>
+  <os>
+    <type arch="x86_64">hvm</type>
+    <boot dev="hd"/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode="host-passthrough" check="none" migratable="off"/>
+  <clock offset="utc"/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <disk type="file" device="disk">
+      <driver name="qemu" type="qcow2" discard="unmap"/>
+      <source file="{{ vm_disk_path }}"/>
+      <target dev="vda" bus="virtio"/>
+    </disk>
+    <disk type="file" device="cdrom">
+      <driver name="qemu" type="raw"/>
+      <source file="{{ vm_seed_iso }}"/>
+      <target dev="sda" bus="sata"/>
+      <readonly/>
+    </disk>
+    <interface type="network">
+      <mac address="{{ vm_mac }}"/>
+      <source network="{{ vm_network_name }}"/>
+      <model type="virtio"/>
+    </interface>
+    <serial type="pty">
+      <target port="0"/>
+    </serial>
+    <console type="pty">
+      <target type="serial" port="0"/>
+    </console>
+    <channel type="unix">
+      <target type="virtio" name="org.qemu.guest_agent.0"/>
+    </channel>
+    <rng model="virtio">
+      <backend model="random">/dev/urandom</backend>
+    </rng>
+    <graphics type="vnc" port="-1" listen="127.0.0.1"/>
+    <video>
+      <model type="virtio"/>
+    </video>
+    <memballoon model="virtio"/>
+  </devices>
+</domain>

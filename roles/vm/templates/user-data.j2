@@ -1,0 +1,35 @@
+#cloud-config
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+#
+# Replayed only on a fresh instance-id: recreate the guest to apply changes.
+hostname: {{ inventory_hostname }}
+fqdn: {{ inventory_hostname }}.{{ vm_network_domain }}
+prefer_fqdn_over_hostname: false
+manage_etc_hosts: true
+timezone: {{ vm_timezone }}
+
+users:
+  - name: {{ vm_user }}
+    groups: [adm, sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+    ssh_authorized_keys:
+      - "{{ vm_ssh_public_key | trim }}"
+
+# Password logins stay off; the lab keypair is the only way in.
+ssh_pwauth: false
+disable_root: true
+
+package_update: true
+packages:
+{% for package in vm_packages %}
+  - {{ package }}
+{% endfor %}
+
+# Cheap marker: `cloud-init status --wait` is what the plays rely on, this
+# only makes a manual check obvious.
+runcmd:
+  - [systemctl, enable, --now, qemu-guest-agent]
+  - [sh, -c, "echo provisioned by ansible-base > /etc/ansible-base-lab"]

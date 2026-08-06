@@ -1,0 +1,23 @@
+{#- SPDX-License-Identifier: MIT -#}
+{#- Copyright (c) 2026 Chris <goabonga@pm.me> -#}
+{#-
+  Isolated NAT network for the lab. Guests receive their address from
+  cloud-init, not from DHCP, so adding a guest to the inventory does not
+  require redefining this network. The DHCP range stays available for
+  throwaway VMs created by hand on the same bridge.
+-#}
+<network>
+  <name>{{ kvm_host_network_name }}</name>
+  <forward mode="nat">
+    <nat>
+      <port start="1024" end="65535"/>
+    </nat>
+  </forward>
+  <bridge name="{{ kvm_host_network_bridge }}" stp="on" delay="0"/>
+  <domain name="{{ kvm_host_network_domain }}" localOnly="yes"/>
+  <ip address="{{ kvm_host_network_gateway }}" netmask="{{ kvm_host_network_netmask }}">
+    <dhcp>
+      <range start="{{ kvm_host_network_dhcp_start }}" end="{{ kvm_host_network_dhcp_end }}"/>
+    </dhcp>
+  </ip>
+</network>

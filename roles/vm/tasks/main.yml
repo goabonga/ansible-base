@@ -1,0 +1,119 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Chris <goabonga@pm.me>
+
+# Creates one libvirt guest: a thin overlay on the shared base image, a
+# NoCloud seed ISO carrying the static address and the lab SSH key, then the
+# domain itself. Runs on the KVM host (the plays set `connection: local`),
+# once per guest of the `lab` group.
+---
+
+- name: Check that the guest declares an address and a MAC
+  ansible.builtin.assert:
+    that:
+      - vm_ip is defined
+      - vm_mac is defined
+    fail_msg: >-
+      {{ inventory_hostname }} must declare `vm_ip` and `vm_mac` in the
+      inventory: cloud-init configures the address statically.
+
+- name: Fetch the cloud image checksums
+  run_once: true
+  ansible.builtin.uri:
+    url: "{{ vm_base_image_checksum_url }}"
+    return_content: true
+  register: vm_checksums
+  # A read-only GET, and the tasks below need its result: without this,
+  # `--check` skips it and the checksum extraction fails on an empty result.
+  check_mode: false
+
+- name: Extract the checksum of {{ vm_base_image_name }}
+  run_once: true
+  ansible.builtin.set_fact:
+    vm_base_image_checksum: >-
+      {{
+        (
+          vm_checksums.content
+          | regex_search('([0-9a-f]{64})\s+\*?' ~ (vm_base_image_name | regex_escape), '\1')
+        ) | first
+      }}
+
+- name: Download the base cloud image
+  become: true
+  run_once: true
+  ansible.builtin.get_url:
+    url: "{{ vm_base_image_url }}"
+    dest: "{{ vm_base_image_path }}"
+    checksum: "sha256:{{ vm_base_image_checksum }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create the guest overlay disk
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      qemu-img create -f qcow2
+      -F qcow2 -b {{ vm_base_image_path }}
+      {{ vm_disk_path }} {{ vm_disk_size }}
+    creates: "{{ vm_disk_path }}"
+
+- name: Create the cloud-init seed directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ vm_seed_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render the cloud-init seed files
+  become: true
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ vm_seed_dir }}/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - meta-data
+    - user-data
+    - network-config
+  notify: Rebuild the cloud-init seed ISO
+
+- name: Build the cloud-init seed ISO
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      genisoimage -output {{ vm_seed_iso }}
+      -volid cidata -joliet -rock
+      meta-data user-data network-config
+    chdir: "{{ vm_seed_dir }}"
+    creates: "{{ vm_seed_iso }}"
+
+# The domain definition below references the ISO, so a pending rebuild has
+# to happen now rather than at the end of the play.
+- name: Apply the pending seed ISO rebuild
+  ansible.builtin.meta: flush_handlers
+
+- name: Define the guest domain
+  become: true
+  community.libvirt.virt:
+    command: define
+    xml: "{{ lookup('ansible.builtin.template', 'domain.xml.j2') }}"
+    uri: "{{ vm_libvirt_uri }}"
+
+- name: Start the guest and enable it at boot
+  become: true
+  community.libvirt.virt:
+    name: "{{ inventory_hostname }}"
+    state: running
+    autostart: "{{ vm_autostart }}"
+    uri: "{{ vm_libvirt_uri }}"
+
+- name: Wait for the guest to answer on SSH
+  ansible.builtin.wait_for:
+    host: "{{ vm_ip }}"
+    port: 22
+    timeout: "{{ vm_ssh_timeout }}"
+    search_regex: OpenSSH
+  when: vm_wait_for_ssh
