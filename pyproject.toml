@@ -46,7 +46,7 @@ dev = [
     "ansible-core>=2.18",
     "ansible-lint>=25",
     "yamllint>=1.35",
-    "ruff>=0.13",
+    "ruff>=0.16.1",
     "pre-commit>=4",
 ]
 
